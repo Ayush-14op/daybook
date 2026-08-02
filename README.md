@@ -24,6 +24,9 @@ targets iPhone, iPad, and Windows desktop, with OS-specific integrations
   open questions.
 - **[UI/UX Design Brief](docs/daybook-design-brief.md)** — screens, component
   system, core flows, visual direction, states, and open design questions.
+- **[Build Plan (PLAN.md)](PLAN.md)** — staged execution plan: decisions and
+  their rejected alternatives, per-step verification, and risk tripwires.
+  This is the source of truth for *what to build next*.
 
 ## Platforms
 
