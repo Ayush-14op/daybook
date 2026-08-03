@@ -143,8 +143,8 @@ you learn the bad news early rather than at the end.
 today's date, and a green CI check appears on the commit.
 
 **Step status:** 0.1 done · 0.2 **blocked on owner decision** · 0.3 done ·
-0.4 done · 0.5 spike pending · 0.6 spike pending · 0.7 done (green check
-unconfirmed until pushed) · 0.8 done.
+0.4 done · 0.5 spike pending · **0.6 spike done — positive, see stage 4 gate** ·
+0.7 done · 0.8 done.
 
 ### Step 0.1 — Scaffold the Flutter project
 
@@ -410,7 +410,36 @@ ticking one off stays ticked after restart.
 > **Gate:** this stage's shape is decided by the Step 0.6 spike result. Record
 > the outcome here before starting:
 >
-> **Spike outcome:** _(unfilled — run Step 0.6)_
+> **Spike outcome (2026-08-03): POSITIVE, with one unresolved caveat.**
+>
+> Probed from an **unpackaged** process (PowerShell, no package identity — the
+> same condition as a `flutter run` debug build) on Windows 11 25H2:
+>
+> - `AppointmentManager.RequestStoreAsync(AllCalendarsReadOnly)` **succeeded**.
+>   No package-identity error, no blocking consent dialog, no capability
+>   rejection. **This was the feared blocker and it did not materialise — MSIX
+>   packaging is not a prerequisite for read access.**
+> - `FindAppointmentCalendarsAsync()` returned **1 calendar**: display name
+>   "Calendar", source "Microsoft account", with `OtherAppReadAccess = Full`.
+> - `FindAppointmentsAsync()` executed without error but returned **0
+>   appointments** across a ±30-day window — that calendar simply has no events
+>   in range.
+>
+> **Caveat — event content is unproven.** Reading zero events from an empty
+> calendar does not prove events would flow if they existed. The machine has
+> both `microsoft.windowscommunicationsapps` (the legacy Mail & Calendar stack,
+> which is what registered the calendar above) and `Microsoft.OutlookForWindows`
+> (the new Outlook) installed. The new Outlook is not known to publish into the
+> legacy WinRT `AppointmentStore`, so a user whose real calendar lives in new
+> Outlook — or in Google Calendar — may see an empty strip even though the API
+> works perfectly.
+>
+> **Close the caveat before step 4.1** by adding one test event to the Windows
+> Calendar that appears under the "Microsoft account" source, then re-running
+> the probe. If the event is returned, proceed with 4.1 as written. If it is
+> not, the real risk is *data source coverage*, not API access — and the
+> fallback becomes an explicit calendar-account setup step in onboarding rather
+> than dropping the feature.
 
 ### Step 4.1 — Windows calendar platform channel
 
@@ -528,7 +557,8 @@ this whole plan is arranged to avoid.
 
 | Risk | Early warning | Fallback |
 | --- | --- | --- |
-| **Windows calendar access is blocked for unpackaged apps** — kills the headline feature on the primary platform | Step 0.6 spike, before any feature work | Tasks-only context strip; calendar becomes iOS-only in v1; update the PRD |
+| ~~**Windows calendar access is blocked for unpackaged apps**~~ — **retired 2026-08-03**: the 0.6 spike showed an unpackaged process gets the store and read access with no MSIX requirement | — | — |
+| **Windows calendar has no usable data source** — the surviving half of the risk above: API works, but the user's real calendar may live in new Outlook or Google and never reach the WinRT store | Add one test event under the "Microsoft account" calendar and re-run the 0.6 probe, before starting step 4.1 | Treat it as onboarding, not architecture: prompt the user to connect a calendar the store can see. Only drop the feature if no data source can be made to work |
 | **SQLCipher doesn't work on Flutter Windows desktop** | Step 0.5 spike, timeboxed to one session | Unencrypted local DB for personal use; encryption becomes a hard gate for public release, recorded as a Known Gap |
 | **OneDrive corrupts or locks build output** | Step 0.2 — mysterious "file in use" or access-denied build failures | Move the repo outside OneDrive; it's the clean fix |
 | **iOS code rots unverified** | Any commit adding real logic under `lib/platform/ios/` before Stage 7 | Keep iOS implementations as `UnimplementedError` stubs. A stub is honest; speculative EventKit code is a lie about your test coverage |
@@ -548,8 +578,9 @@ surprise later.*
   public release.
 - **Riverpod held at 2.6.1** because 3.x cannot resolve alongside `drift_dev`.
   Not a defect, but recheck at stage 5.
-- **CI has never actually run.** The workflow is committed but nothing has been
-  pushed, so the green check in step 0.7 is unverified.
+- **Calendar event content is unproven on Windows** — API access is confirmed
+  working, but no real event has ever been read. See the stage 4 gate for the
+  30-second check that closes this.
 - **`build/` and `.dart_tool/` still sync to OneDrive** — step 0.2 is unresolved
   pending the owner's call on moving the repo.
 
