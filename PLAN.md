@@ -23,8 +23,12 @@ shortcut that blocks a public release later. Read the Decisions section below
 before changing any of those choices — they have reasons. Then find the first
 stage whose checkbox is unticked and start at its first unticked step.
 
-**Current state:** Stage 0 not started. Repo contains docs and this plan only —
-no Flutter project yet.
+**Current state (2026-08-03):** Stage 0 steps 0.1, 0.3, 0.4, 0.7 and 0.8 are
+done — the app builds and opens a window showing today's date, the schema and
+repository interfaces exist with in-memory fakes, `flutter analyze` is clean and
+10 tests pass, CI is wired. **Remaining in stage 0:** step 0.2 (OneDrive
+exclusion — needs a decision from the owner), and the two spikes, 0.5
+(encryption) and 0.6 (Windows calendar). Stage 1 can start without the spikes.
 
 ---
 
@@ -55,6 +59,15 @@ strip, autosave status, and day navigation all read shared state.
 **Why it wins here:** provider overrides make swapping the in-memory fake
 repositories into widget tests a one-liner, and the PRD already committed to
 repository interfaces. The two designs fit together with no glue.
+
+**Pinned to 2.6.1, not 3.x** *(found during step 0.3)*: `flutter_riverpod`
+3.4.2 depends on `riverpod` 3.4.2, which depends on `test ^1.0.0`, whose
+`analyzer` constraint collides with `drift_dev`'s `analyzer ^13.0.0` under the
+`matcher`/`test_api` versions pinned by `flutter_test`. Pub's resolver reports
+it plainly: with `drift_dev` and `build_runner` present, Riverpod 3.x has no
+solution. Riverpod 2.6.1 is the newest resolvable version and is fully
+supported. **Recheck at stage 5** by running `flutter pub outdated` — if
+`drift_dev` widens its analyzer range, upgrading is a contained change.
 
 ### D2 — Windows-first, iOS stubbed
 
@@ -88,10 +101,22 @@ without a migration. You cannot easily walk back a rich-text document model.
 
 ### D5 — Encryption at rest: decided by spike, not by assumption
 
-**Chosen:** attempt SQLCipher (`sqlcipher_flutter_libs`) with the key held in
-platform secure storage (`flutter_secure_storage` → DPAPI/Credential Locker on
-Windows, Keychain on iOS). **This is unverified on Flutter Windows desktop** —
-Step 0.5 is a spike, not an implementation.
+**Chosen:** encrypted SQLite with the key held in platform secure storage
+(DPAPI/Credential Locker on Windows, Keychain on iOS). **The mechanism is
+unverified on Flutter Windows desktop** — Step 0.5 is a spike, not an
+implementation.
+
+**Correction — the obvious route is closed** *(found during step 0.3)*: both
+`sqlcipher_flutter_libs` (0.7.0+eol) and `sqlite3_flutter_libs` (0.6.0+eol) are
+now **end-of-life no-op shims**. Their pub.dev notice: they relate to
+`package:sqlite3` 2.x and are obsolete after upgrading, and since 0.7.0 /
+0.6.0 they "no longer do anything." This project already resolves
+`sqlite3` 3.5.0, so those two packages come in transitively via
+`drift_flutter` 0.3.1 and are inert. **The spike must therefore target
+`package:sqlite3` 3.x's own encryption story, not `sqlcipher_flutter_libs`.**
+Start by reading the `package:sqlite3` 3.x upgrade notes for how encrypted
+databases are meant to be opened now — do not copy any pre-3.x SQLCipher
+tutorial, as it will reference the dead packages.
 **Fallback if the spike fails:** ship the MVP on an unencrypted local DB, record
 it as a known gap in this file, and treat encryption as a hard prerequisite for
 public release (not for personal use). Do **not** burn a week fighting native
@@ -116,6 +141,10 @@ you learn the bad news early rather than at the end.
 
 **Visible endpoint:** `flutter run -d windows` opens a Daybook window showing
 today's date, and a green CI check appears on the commit.
+
+**Step status:** 0.1 done · 0.2 **blocked on owner decision** · 0.3 done ·
+0.4 done · 0.5 spike pending · 0.6 spike pending · 0.7 done (green check
+unconfirmed until pushed) · 0.8 done.
 
 ### Step 0.1 — Scaffold the Flutter project
 
@@ -144,9 +173,13 @@ today's date, and a green CI check appears on the commit.
 
 - **Goal:** the dependency set and folder layout every later step assumes.
 - **Where:** `pubspec.yaml`, `lib/`.
-  - Dependencies: `flutter_riverpod`, `drift`, `drift_flutter`,
-    `sqlite3_flutter_libs`, `path_provider`, `uuid`, `intl`.
-  - Dev dependencies: `drift_dev`, `build_runner`, `flutter_lints`.
+  - Dependencies as actually installed: `flutter_riverpod` ^2.6.1, `drift`
+    ^2.34.3, `drift_flutter` ^0.3.1, `uuid` ^4.6.0, `intl` ^0.20.3.
+    `sqlite3_flutter_libs` and `path_provider` are **not** direct dependencies —
+    `drift_flutter` brings both, and its `driftDatabase(name:)` helper resolves
+    the database path itself, so declaring them would be redundant.
+  - Dev dependencies: `drift_dev` ^2.34.5, `build_runner` ^2.15.1,
+    `flutter_lints` ^6.0.0.
   - Pin the resolved versions — commit `pubspec.lock`.
   - Folders: `lib/data/` (drift database, DAOs), `lib/domain/` (models,
     repository interfaces), `lib/features/entry/`, `lib/features/history/`,
@@ -170,9 +203,10 @@ today's date, and a green CI check appears on the commit.
   - Interfaces per the PRD sketch: `EntryRepository`, `TaskRepository`,
     `CalendarRepository`. Write in-memory fakes for all three.
   - Riverpod providers for each repository, overridable in tests.
-- **Verify:** `dart run build_runner build --delete-conflicting-outputs`
-  succeeds, then `flutter test` passes a test that writes and reads an entry
-  through the in-memory fake.
+- **Verify:** `dart run build_runner build` succeeds, then `flutter test` passes
+  a test that writes and reads an entry through the in-memory fake.
+  (`--delete-conflicting-outputs` has been removed from build_runner and is
+  ignored if passed.)
 - **Fence:** no calendar-event cache table yet — Stage 4 decides whether one is
   needed. No FTS5 table yet — Stage 2 decides. Don't implement any real
   platform repository here; fakes only.
@@ -182,9 +216,10 @@ today's date, and a green CI check appears on the commit.
 - **Goal:** find out whether encryption-at-rest is achievable on Flutter Windows
   desktop before the schema has data in it. Answer the question; don't ship the
   feature.
-- **Where:** a throwaway branch. Add `sqlcipher_flutter_libs` and
-  `flutter_secure_storage`, open the drift database with a key pulled from
-  secure storage.
+- **Where:** a throwaway branch. Per the D5 correction, work from
+  `package:sqlite3` 3.x's documented encryption support (**not**
+  `sqlcipher_flutter_libs`, which is a dead no-op), plus `flutter_secure_storage`
+  for the key. Open the drift database with a key pulled from secure storage.
 - **Verify:** the app writes an entry, and opening the resulting `.sqlite` file
   with a plain SQLite tool fails or shows ciphertext — not readable prose. If it
   reads as plain text, encryption is not actually on.
@@ -507,7 +542,16 @@ this whole plan is arranged to avoid.
 *Record anything shipped deliberately incomplete, so it isn't rediscovered as a
 surprise later.*
 
-- _(none yet)_
+- **Encryption at rest is not implemented.** The database is plain SQLite. The
+  route assumed in D5 turned out to be dead (see the D5 correction), so the
+  spike hasn't run yet. Acceptable for personal use; a hard gate before any
+  public release.
+- **Riverpod held at 2.6.1** because 3.x cannot resolve alongside `drift_dev`.
+  Not a defect, but recheck at stage 5.
+- **CI has never actually run.** The workflow is committed but nothing has been
+  pushed, so the green check in step 0.7 is unverified.
+- **`build/` and `.dart_tool/` still sync to OneDrive** — step 0.2 is unresolved
+  pending the owner's call on moving the repo.
 
 ---
 

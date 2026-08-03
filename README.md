@@ -4,7 +4,9 @@
 > built with Flutter. Journal entries with today's calendar events and
 > reminders shown inline. Inspired by Parchment.
 
-**Status:** Planning / PRD stage.
+**Status:** Stage 0 (foundation) — the app builds and runs on Windows; the
+schema, repository interfaces and CI are in place. iOS is deferred, see
+[PLAN.md](PLAN.md).
 
 ## What it is
 
@@ -45,7 +47,17 @@ OS integrations · GitHub Actions CI (iOS + Windows build targets).
 ```
 daybook/
 ├── README.md
-└── docs/
-    ├── daybook-prd.md            # product requirements
-    └── daybook-design-brief.md   # UI/UX design brief
+├── PLAN.md                       # staged build plan — start here
+├── CLAUDE.md                     # working conventions
+├── docs/
+│   ├── daybook-prd.md            # product requirements
+│   └── daybook-design-brief.md   # UI/UX design brief
+├── lib/
+│   ├── domain/                   # models, repository interfaces, fakes
+│   ├── data/                     # drift database
+│   ├── platform/                 # windows/ (real), ios/ (stubs)
+│   └── main.dart
+├── test/
+├── windows/                      # Flutter Windows runner
+└── ios/                          # Flutter iOS runner (not yet buildable)
 ```
