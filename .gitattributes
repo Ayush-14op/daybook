@@ -1,0 +1,12 @@
+# Keep LF in the working tree on every platform.
+#
+# Without this, a Windows checkout gets CRLF while build_runner writes LF, so
+# CI's "generated files are up to date" check (.github/workflows/ci.yml) fails
+# on line endings alone rather than on a real schema drift.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.otf binary
