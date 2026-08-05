@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models.dart';
 import '../../providers.dart';
 import '../history/history_pane.dart';
+import '../history/history_screen.dart';
 import 'entry_screen.dart';
 
 /// Owns which day is on screen, the keyboard shortcuts for moving between
@@ -13,7 +14,7 @@ class JournalScreen extends ConsumerWidget {
   const JournalScreen({super.key});
 
   /// Above this width the history list earns a permanent column; below it, the
-  /// writing area needs the whole window.
+  /// writing area needs the whole window and history becomes its own screen.
   static const historyPaneBreakpoint = 900.0;
 
   @override
@@ -31,13 +32,14 @@ class JournalScreen extends ConsumerWidget {
     void shift(int days) =>
         goTo(DateTime(day.year, day.month, day.day + days));
 
-    final page = EntryScreen(
-      // Keyed by day so each page gets its own editor state rather than
-      // inheriting the previous day's text.
-      key: ValueKey(dayKey(day)),
-      day: day,
-      onNavigate: goTo,
-    );
+    // Keyed by day so each page gets its own editor state rather than
+    // inheriting the previous day's text.
+    EntryScreen page({VoidCallback? onOpenHistory}) => EntryScreen(
+          key: ValueKey(dayKey(day)),
+          day: day,
+          onNavigate: goTo,
+          onOpenHistory: onOpenHistory,
+        );
 
     return CallbackShortcuts(
       bindings: {
@@ -50,17 +52,27 @@ class JournalScreen extends ConsumerWidget {
       },
       child: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth < historyPaneBreakpoint) return page;
+          if (constraints.maxWidth < historyPaneBreakpoint) {
+            return page(
+              onOpenHistory: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (routeContext) => HistoryScreen(
+                    onOpenDay: (target) {
+                      goTo(target);
+                      Navigator.of(routeContext).pop();
+                    },
+                  ),
+                ),
+              ),
+            );
+          }
 
           return Scaffold(
             body: Row(
               children: [
-                SizedBox(
-                  width: 280,
-                  child: HistoryPane(onOpenDay: goTo),
-                ),
+                SizedBox(width: 280, child: HistoryPane(onOpenDay: goTo)),
                 const VerticalDivider(width: 1),
-                Expanded(child: page),
+                Expanded(child: page()),
               ],
             ),
           );

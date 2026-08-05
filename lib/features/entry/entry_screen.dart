@@ -12,13 +12,22 @@ import '../../providers.dart';
 /// There is no Save button by design — typing stops, the entry saves. See
 /// PLAN.md step 1.2.
 class EntryScreen extends ConsumerStatefulWidget {
-  const EntryScreen({super.key, required this.day, this.onNavigate});
+  const EntryScreen({
+    super.key,
+    required this.day,
+    this.onNavigate,
+    this.onOpenHistory,
+  });
 
   final DateTime day;
 
   /// Supplied by [JournalScreen]. When null the page has no day controls,
   /// which is how it is exercised in isolation.
   final ValueChanged<DateTime>? onNavigate;
+
+  /// Only supplied when the window is too narrow for a history column, so the
+  /// control does not appear next to a list that is already on screen.
+  final VoidCallback? onOpenHistory;
 
   /// Quiet enough not to thrash the disk mid-sentence, short enough that
   /// closing the window straight after typing does not lose the last words.
@@ -97,6 +106,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
                     day: widget.day,
                     saved: _saved,
                     onNavigate: widget.onNavigate,
+                    onOpenHistory: widget.onOpenHistory,
                   ),
                   const SizedBox(height: 24),
                   Expanded(
@@ -136,11 +146,13 @@ class _DateHeader extends StatelessWidget {
     required this.day,
     required this.saved,
     this.onNavigate,
+    this.onOpenHistory,
   });
 
   final DateTime day;
   final bool saved;
   final ValueChanged<DateTime>? onNavigate;
+  final VoidCallback? onOpenHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +199,12 @@ class _DateHeader extends StatelessWidget {
                 )
               : const SizedBox.shrink(),
         ),
+        if (onOpenHistory case final open?)
+          _NavButton(
+            tooltip: 'History',
+            icon: Icons.history,
+            onPressed: open,
+          ),
       ],
     );
   }

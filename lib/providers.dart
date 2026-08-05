@@ -14,6 +14,17 @@ final recentEntriesProvider = FutureProvider<List<JournalEntry>>(
   (ref) => ref.watch(entryRepositoryProvider).recent(),
 );
 
+/// What the user has typed into the search field. Empty means "not searching".
+final searchQueryProvider = StateProvider<String>((ref) => '');
+
+/// What the history list should show right now: search results while a query
+/// is present, the recent list otherwise.
+final visibleEntriesProvider = FutureProvider<List<JournalEntry>>((ref) async {
+  final query = ref.watch(searchQueryProvider).trim();
+  if (query.isEmpty) return ref.watch(recentEntriesProvider.future);
+  return ref.watch(entryRepositoryProvider).search(query);
+});
+
 /// Repository wiring. Each provider throws until it is overridden at app
 /// startup (or in a test), so a missing override fails loudly instead of
 /// silently reading from the wrong store.

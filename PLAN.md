@@ -23,13 +23,14 @@ shortcut that blocks a public release later. Read the Decisions section below
 before changing any of those choices — they have reasons. Then find the first
 stage whose checkbox is unticked and start at its first unticked step.
 
-**Current state (2026-08-05):** **Stage 1 is complete** — Daybook is a working
-private journal: it opens on today, autosaves as you type, and the entry is
-still there after a cold restart. Theme, entry screen and the drift-backed
-repository are all in. `flutter analyze` is clean, 32 tests pass, CI is green.
-**Remaining in stage 0:** step 0.2 (OneDrive exclusion — needs a decision from
-the owner) and step 0.5 (the encryption spike). Step 0.6 came back positive.
-**Next up: stage 2** — day navigation, history list, search.
+**Current state (2026-08-05):** **Stages 1 and 2 are complete.** Daybook is a
+usable private journal: opens on today, autosaves as you type, survives a cold
+restart, moves between days by control or keyboard, lists past entries in a
+pane above 900px (its own screen below), and searches them. `flutter analyze` is
+clean and 60 tests pass. **Remaining in stage 0:** step 0.2 (OneDrive exclusion
+— needs a decision from the owner) and step 0.5 (the encryption spike). Step 0.6
+came back positive. **Next up: stage 3** — the context strip and the local task
+store.
 
 ---
 
@@ -39,9 +40,8 @@ the owner) and step 0.5 (the encryption spike). Step 0.6 came back positive.
 - [x] **Stage 1** — Walking skeleton: write today's entry, it survives restart
       *(done 2026-08-05 — verified by typing into the running app, killing the
       process, and relaunching cold)*
-- [ ] **Stage 2** — Time travel: navigate days, browse history, search
-      *(2.1 day navigation done · 2.2 history list done · **2.3 search
-      remaining**)*
+- [x] **Stage 2** — Time travel: navigate days, browse history, search
+      *(done 2026-08-05)*
 - [ ] **Stage 3** — Tasks: due items in the context strip, complete inline
 - [ ] **Stage 4** — Calendar: today's real events above the entry
 - [ ] **Stage 5** — Polish: states, accessibility, dark mode, long content
