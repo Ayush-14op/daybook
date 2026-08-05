@@ -8,6 +8,12 @@ import 'domain/repositories.dart';
 final currentDayProvider =
     StateProvider<DateTime>((ref) => dateOnly(DateTime.now()));
 
+/// Days with something written on them, newest first. Invalidated after a
+/// save so the history list reflects what was just typed.
+final recentEntriesProvider = FutureProvider<List<JournalEntry>>(
+  (ref) => ref.watch(entryRepositoryProvider).recent(),
+);
+
 /// Repository wiring. Each provider throws until it is overridden at app
 /// startup (or in a test), so a missing override fails loudly instead of
 /// silently reading from the wrong store.

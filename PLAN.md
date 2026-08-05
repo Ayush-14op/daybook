@@ -40,6 +40,8 @@ the owner) and step 0.5 (the encryption spike). Step 0.6 came back positive.
       *(done 2026-08-05 — verified by typing into the running app, killing the
       process, and relaunching cold)*
 - [ ] **Stage 2** — Time travel: navigate days, browse history, search
+      *(2.1 day navigation done · 2.2 history list done · **2.3 search
+      remaining**)*
 - [ ] **Stage 3** — Tasks: due items in the context strip, complete inline
 - [ ] **Stage 4** — Calendar: today's real events above the entry
 - [ ] **Stage 5** — Polish: states, accessibility, dark mode, long content

@@ -61,6 +61,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
   Future<void> _save(String body) async {
     await _repository.saveBody(widget.day, body);
     if (!mounted) return;
+    ref.invalidate(recentEntriesProvider);
     setState(() => _saved = true);
   }
 
