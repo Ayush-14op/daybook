@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 
 part 'database.g.dart';
 
@@ -41,7 +42,16 @@ class Tasks extends Table {
 @DriftDatabase(tables: [Entries, Tasks])
 class DaybookDatabase extends _$DaybookDatabase {
   DaybookDatabase([QueryExecutor? executor])
-      : super(executor ?? driftDatabase(name: 'daybook'));
+      : super(executor ?? driftDatabase(name: 'daybook', native: _native));
+
+  /// `drift_flutter` defaults to `getApplicationDocumentsDirectory()`, which on
+  /// Windows is the user's Documents folder — commonly redirected into
+  /// OneDrive. That would drop the journal into a cloud-synced folder, which
+  /// breaks the local-first promise and risks SQLite corruption over a sync
+  /// client. Application support is the correct home for app-private data on
+  /// both target platforms.
+  static final _native =
+      DriftNativeOptions(databaseDirectory: getApplicationSupportDirectory);
 
   @override
   int get schemaVersion => 1;

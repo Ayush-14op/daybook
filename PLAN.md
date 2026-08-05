@@ -23,19 +23,22 @@ shortcut that blocks a public release later. Read the Decisions section below
 before changing any of those choices — they have reasons. Then find the first
 stage whose checkbox is unticked and start at its first unticked step.
 
-**Current state (2026-08-03):** Stage 0 steps 0.1, 0.3, 0.4, 0.7 and 0.8 are
-done — the app builds and opens a window showing today's date, the schema and
-repository interfaces exist with in-memory fakes, `flutter analyze` is clean and
-10 tests pass, CI is wired. **Remaining in stage 0:** step 0.2 (OneDrive
-exclusion — needs a decision from the owner), and the two spikes, 0.5
-(encryption) and 0.6 (Windows calendar). Stage 1 can start without the spikes.
+**Current state (2026-08-05):** **Stage 1 is complete** — Daybook is a working
+private journal: it opens on today, autosaves as you type, and the entry is
+still there after a cold restart. Theme, entry screen and the drift-backed
+repository are all in. `flutter analyze` is clean, 32 tests pass, CI is green.
+**Remaining in stage 0:** step 0.2 (OneDrive exclusion — needs a decision from
+the owner) and step 0.5 (the encryption spike). Step 0.6 came back positive.
+**Next up: stage 2** — day navigation, history list, search.
 
 ---
 
 ## Progress
 
 - [ ] **Stage 0** — Foundation: app window opens on Windows, CI green
-- [ ] **Stage 1** — Walking skeleton: write today's entry, it survives restart
+- [x] **Stage 1** — Walking skeleton: write today's entry, it survives restart
+      *(done 2026-08-05 — verified by typing into the running app, killing the
+      process, and relaunching cold)*
 - [ ] **Stage 2** — Time travel: navigate days, browse history, search
 - [ ] **Stage 3** — Tasks: due items in the context strip, complete inline
 - [ ] **Stage 4** — Calendar: today's real events above the entry
@@ -309,6 +312,16 @@ This stage alone is a usable private journal. Treat it as the real milestone.
 - **Verify:** `flutter test` still passes (fakes unaffected), and the manual
   restart check from Step 1.2 still works. Confirm the `.sqlite` file exists in
   the app-support directory.
+- **Found while doing this — `drift_flutter` puts the database in the wrong
+  place by default.** `driftDatabase(name:)` falls back to
+  `getApplicationDocumentsDirectory()`, which on Windows is the user's Documents
+  folder — frequently redirected into OneDrive, as it is on this machine. The
+  journal was therefore being written to a cloud-synced folder, which breaks the
+  local-first promise and risks SQLite corruption over a sync client. Fixed by
+  passing `DriftNativeOptions(databaseDirectory: getApplicationSupportDirectory)`;
+  `path_provider` became a direct dependency as a result. **Check this again on
+  iOS in stage 7** — the same default applies there, where Documents is
+  user-visible in the Files app and backed up to iCloud.
 - **Fence:** don't touch the repository *interface* in this step. If the
   interface needs to change to fit SQLite, that's a signal the Step 0.4 contract
   was wrong — fix it deliberately and note why here, don't quietly widen it.
@@ -583,6 +596,9 @@ surprise later.*
   30-second check that closes this.
 - **`build/` and `.dart_tool/` still sync to OneDrive** — step 0.2 is unresolved
   pending the owner's call on moving the repo.
+- **A stray `C:\Users\aayus\OneDrive\Documents\daybook.sqlite` exists** from
+  before the database-location fix. It was created by early dev runs and holds
+  no entries. Safe to delete; left in place because it is outside the repo.
 
 ---
 

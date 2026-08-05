@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import 'data/database.dart';
+import 'data/drift_entry_repository.dart';
+import 'domain/fakes.dart';
+import 'features/entry/entry_screen.dart';
 import 'providers.dart';
+import 'ui/theme.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final database = DaybookDatabase();
+
   runApp(
     ProviderScope(
-      // Real drift-backed repositories replace these in stage 1.3.
-      overrides: inMemoryOverrides(),
+      overrides: [
+        entryRepositoryProvider
+            .overrideWithValue(DriftEntryRepository(database)),
+        // Tasks move to a drift-backed store in stage 3.
+        taskRepositoryProvider.overrideWithValue(InMemoryTaskRepository()),
+      ],
       child: const DaybookApp(),
     ),
   );
@@ -22,23 +34,11 @@ class DaybookApp extends StatelessWidget {
     return MaterialApp(
       title: 'Daybook',
       debugShowCheckedModeBanner: false,
-      home: const TodayScreen(),
-    );
-  }
-}
-
-/// Stage 0 placeholder: proves the app boots and knows what day it is.
-/// The real entry screen lands in stage 1.2.
-class TodayScreen extends StatelessWidget {
-  const TodayScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final today = DateFormat('EEEE, d MMMM y').format(DateTime.now());
-    return Scaffold(
-      body: Center(
-        child: Text(today, style: Theme.of(context).textTheme.headlineSmall),
-      ),
+      theme: DaybookTheme.light,
+      darkTheme: DaybookTheme.dark,
+      themeMode: ThemeMode.system,
+      // Day navigation arrives in stage 2.1; for now the app is always today.
+      home: EntryScreen(day: DateTime.now()),
     );
   }
 }
