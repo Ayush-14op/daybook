@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../domain/repositories.dart';
 import '../../providers.dart';
 
 /// One journal page. The writing area is the hero; everything else recedes.
@@ -11,9 +12,13 @@ import '../../providers.dart';
 /// There is no Save button by design — typing stops, the entry saves. See
 /// PLAN.md step 1.2.
 class EntryScreen extends ConsumerStatefulWidget {
-  const EntryScreen({super.key, required this.day});
+  const EntryScreen({super.key, required this.day, this.onNavigate});
 
   final DateTime day;
+
+  /// Supplied by [JournalScreen]. When null the page has no day controls,
+  /// which is how it is exercised in isolation.
+  final ValueChanged<DateTime>? onNavigate;
 
   /// Quiet enough not to thrash the disk mid-sentence, short enough that
   /// closing the window straight after typing does not lose the last words.
@@ -29,15 +34,19 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
   bool _loading = true;
   bool _saved = false;
 
+  /// Captured up front so a pending save can still be flushed from [dispose],
+  /// where reading a provider is no longer allowed.
+  late final EntryRepository _repository;
+
   @override
   void initState() {
     super.initState();
+    _repository = ref.read(entryRepositoryProvider);
     _load();
   }
 
   Future<void> _load() async {
-    final entry =
-        await ref.read(entryRepositoryProvider).entryFor(widget.day);
+    final entry = await _repository.entryFor(widget.day);
     if (!mounted) return;
     _controller.text = entry?.body ?? '';
     setState(() => _loading = false);
@@ -50,13 +59,19 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
   }
 
   Future<void> _save(String body) async {
-    await ref.read(entryRepositoryProvider).saveBody(widget.day, body);
+    await _repository.saveBody(widget.day, body);
     if (!mounted) return;
     setState(() => _saved = true);
   }
 
   @override
   void dispose() {
+    // Leaving the page mid-debounce must not cost the user their last
+    // sentence. Fire-and-forget against the day this page was showing — by the
+    // time this runs, the day on screen may already be a different one.
+    if (_debounce?.isActive ?? false) {
+      _repository.saveBody(widget.day, _controller.text);
+    }
     _debounce?.cancel();
     _controller.dispose();
     super.dispose();
@@ -77,7 +92,11 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _DateHeader(day: widget.day, saved: _saved),
+                  _DateHeader(
+                    day: widget.day,
+                    saved: _saved,
+                    onNavigate: widget.onNavigate,
+                  ),
                   const SizedBox(height: 24),
                   Expanded(
                     child: _loading
@@ -112,17 +131,38 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
 }
 
 class _DateHeader extends StatelessWidget {
-  const _DateHeader({required this.day, required this.saved});
+  const _DateHeader({
+    required this.day,
+    required this.saved,
+    this.onNavigate,
+  });
 
   final DateTime day;
   final bool saved;
+  final ValueChanged<DateTime>? onNavigate;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final navigate = onNavigate;
 
     return Row(
       children: [
+        if (navigate != null) ...[
+          _NavButton(
+            tooltip: 'Previous day',
+            icon: Icons.chevron_left,
+            onPressed: () =>
+                navigate(DateTime(day.year, day.month, day.day - 1)),
+          ),
+          _NavButton(
+            tooltip: 'Next day',
+            icon: Icons.chevron_right,
+            onPressed: () =>
+                navigate(DateTime(day.year, day.month, day.day + 1)),
+          ),
+          const SizedBox(width: 12),
+        ],
         Expanded(
           child: Text(
             DateFormat('EEEE, d MMMM y').format(day),
@@ -147,6 +187,30 @@ class _DateHeader extends StatelessWidget {
               : const SizedBox.shrink(),
         ),
       ],
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon),
+      iconSize: 20,
+      visualDensity: VisualDensity.compact,
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+      onPressed: onPressed,
     );
   }
 }

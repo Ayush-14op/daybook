@@ -1,7 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'domain/fakes.dart';
+import 'domain/models.dart';
 import 'domain/repositories.dart';
+
+/// The day currently on screen. "Today" is just where you start.
+final currentDayProvider =
+    StateProvider<DateTime>((ref) => dateOnly(DateTime.now()));
 
 /// Repository wiring. Each provider throws until it is overridden at app
 /// startup (or in a test), so a missing override fails loudly instead of

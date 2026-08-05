@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'data/database.dart';
 import 'data/drift_entry_repository.dart';
 import 'domain/fakes.dart';
-import 'features/entry/entry_screen.dart';
+import 'features/entry/journal_screen.dart';
 import 'providers.dart';
 import 'ui/theme.dart';
 
@@ -37,8 +37,7 @@ class DaybookApp extends StatelessWidget {
       theme: DaybookTheme.light,
       darkTheme: DaybookTheme.dark,
       themeMode: ThemeMode.system,
-      // Day navigation arrives in stage 2.1; for now the app is always today.
-      home: EntryScreen(day: DateTime.now()),
+      home: const JournalScreen(),
     );
   }
 }
